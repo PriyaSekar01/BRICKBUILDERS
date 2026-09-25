@@ -284,7 +284,7 @@ button { cursor: pointer; }
 
 .hero {
     position: relative;
-    min-height: 760px;
+    min-height: clamp(640px, 82svh, 760px);
     display: flex;
     align-items: center;
     color: var(--white);
@@ -548,36 +548,95 @@ button { cursor: pointer; }
    ========================================================= */
 
 .intro-strip {
-    background: var(--gold);
-    color: #0b0b0a;
+    position: relative;
+    background: #111414;
+    color: var(--ivory);
+    border-top: 1px solid rgba(255,255,255,.08);
+    border-bottom: 1px solid rgba(0,0,0,.12);
 }
 
 .intro-grid {
-    min-height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
+    min-height: 104px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    text-align: center;
+    gap: 8px;
+}
+
+.intro-grid::before {
+    content: "";
+    width: 34px;
+    height: 2px;
+    margin-bottom: 2px;
+    background: var(--gold);
+}
+
+.intro-grid p {
+    max-width: 100%;
 }
 
 .intro-grid p:first-child {
-    font-size: 11px;
+    color: var(--gold-light);
+    font-size: 10px;
     font-weight: 900;
-    letter-spacing: .15em;
+    letter-spacing: .2em;
 }
 
 .intro-grid p:last-child {
+    color: rgba(244,239,229,.62);
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 600;
+    letter-spacing: .04em;
 }
 
-.intro-grid span { margin: 0 9px; opacity: .5; }
+.intro-grid span {
+    margin: 0 9px;
+    color: var(--gold-light);
+    opacity: .8;
+}
+
+@media (max-width: 780px) {
+    .intro-grid {
+        min-height: 92px;
+        gap: 6px;
+    }
+
+    .intro-grid p:first-child {
+        font-size: 9px;
+    }
+
+    .intro-grid p:last-child {
+        font-size: 8px;
+        line-height: 1.7;
+    }
+
+    .intro-grid span {
+        margin-inline: 6px;
+    }
+}
+
+/* Keep the intro content centered at every viewport size. */
+.intro-grid {
+    margin-inline: auto;
+    justify-content: center;
+}
 
 /* =========================================================
    SECTIONS
    ========================================================= */
 
 .section { padding: 125px 0; }
+
+.about-grid > *,
+.services-grid > *,
+.process-grid > *,
+.why-grid > *,
+.cta-inner > *,
+.contact-grid > *,
+.section-heading > * {
+    min-width: 0;
+}
 
 .section-heading {
     display: flex;
@@ -654,7 +713,7 @@ button { cursor: pointer; }
 
 .about-image {
     position: relative;
-    min-height: 590px;
+    min-height: clamp(430px, 48vw, 590px);
     overflow: hidden;
     border-radius: 17px;
 }
@@ -662,7 +721,7 @@ button { cursor: pointer; }
 .about-image img {
     width: 100%;
     height: 100%;
-    min-height: 590px;
+    min-height: inherit;
     object-fit: cover;
     object-position: center;
     transition: transform 1.1s var(--ease);
@@ -875,13 +934,13 @@ button { cursor: pointer; }
 
 .projects-track {
     position: relative;
-    min-height: 560px;
+    min-height: clamp(430px, 48vw, 560px);
 }
 
 .project-card {
     display: none;
     overflow: hidden;
-    min-height: 560px;
+    min-height: clamp(430px, 48vw, 560px);
     border-radius: 20px;
     border-color: rgba(255,255,255,.12);
     background: rgba(255,255,255,.04);
@@ -903,7 +962,7 @@ button { cursor: pointer; }
     transition: background-position 1s var(--ease), transform .9s var(--ease);
 }
 
-.project-card .project-image { min-height: 560px; }
+.project-card .project-image { min-height: inherit; }
 
 .project-image-1 {
     background-image: url("../images/project-1.png");
@@ -1432,7 +1491,15 @@ button { cursor: pointer; }
    ========================================================= */
 
 @media (max-width: 1050px) {
-    .nav { gap: 17px; }
+    .nav { gap: 14px; }
+
+    .nav > a {
+        font-size: 9px;
+    }
+
+    .nav .nav-cta {
+        padding-inline: 14px;
+    }
 
     .hero-copy { width: min(700px, 100%); }
 
@@ -1459,7 +1526,7 @@ button { cursor: pointer; }
 
     .projects-track,
     .project-card,
-    .project-card .project-image { min-height: 500px; }
+    .project-card .project-image { min-height: clamp(430px, 58vw, 500px); }
 }
 
 @media (max-width: 780px) {
@@ -1548,7 +1615,7 @@ button { cursor: pointer; }
     }
 
     .hero {
-        min-height: 680px;
+        min-height: clamp(620px, 86svh, 680px);
         align-items: flex-end;
         padding-bottom: 58px;
     }
@@ -1648,11 +1715,10 @@ button { cursor: pointer; }
     }
 
     .intro-grid {
-        min-height: auto;
-        padding: 19px 0;
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 5px;
+        min-height: 92px;
+        padding: 14px 0;
+        align-items: center;
+        gap: 6px;
     }
 
     .intro-grid p:first-child { font-size: 9px; }
@@ -1684,7 +1750,7 @@ button { cursor: pointer; }
 
     .about-image,
     .about-image img {
-        min-height: 430px;
+        min-height: clamp(350px, 78vw, 430px);
     }
 
     .experience-card {
@@ -1727,7 +1793,7 @@ button { cursor: pointer; }
 
     .projects-track,
     .project-card,
-    .project-card .project-image { min-height: 390px; }
+    .project-card .project-image { min-height: clamp(360px, 78vw, 390px); }
 
     .projects-controls { margin-top: 14px; }
 
@@ -1808,7 +1874,7 @@ button { cursor: pointer; }
     .container { width: calc(100% - 20px); }
 
     .hero {
-        min-height: 620px;
+        min-height: clamp(580px, 88svh, 620px);
         padding-bottom: 42px;
     }
 
@@ -1844,7 +1910,7 @@ button { cursor: pointer; }
 
     .about-image,
     .about-image img {
-        min-height: 350px;
+        min-height: clamp(320px, 82vw, 350px);
     }
 
     .experience-card {
@@ -1865,7 +1931,8 @@ button { cursor: pointer; }
 
     .projects-track,
     .project-card,
-    .project-card .project-image { min-height: 330px; }
+    .project-card,
+    .project-card .project-image { min-height: clamp(300px, 82vw, 330px); }
 
     .footer { padding-top: 48px; }
 }

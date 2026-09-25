@@ -65,10 +65,21 @@ function initScrollReveal() {
         "(prefers-reduced-motion: reduce)"
     ).matches;
 
-    if (!("IntersectionObserver" in window) || reducedMotion) {
-        elements.forEach((element) => {
-            element.classList.add("is-visible");
-        });
+    if (reducedMotion) {
+        elements.forEach((element) => element.classList.add("is-visible"));
+        return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+        const revealElements = () => {
+            elements.forEach((element) => element.classList.add("is-visible"));
+        };
+
+        if ("requestAnimationFrame" in window) {
+            window.requestAnimationFrame(revealElements);
+        } else {
+            window.setTimeout(revealElements, 0);
+        }
         return;
     }
 
@@ -129,9 +140,13 @@ function initLetterAnimation() {
         </span>
     `;
 
-    requestAnimationFrame(() => {
-        title.classList.add("letters-ready");
-    });
+    const startAnimation = () => title.classList.add("letters-ready");
+
+    if ("requestAnimationFrame" in window) {
+        window.requestAnimationFrame(startAnimation);
+    } else {
+        window.setTimeout(startAnimation, 0);
+    }
 }
 
 /* ---------------------------------------------------------
