@@ -12,7 +12,7 @@ const contactForm = document.getElementById("contactForm");
 const yearElement = document.getElementById("year");
 
 const CONFIG = {
-    whatsappNumber: "919999999999",
+    contactEmail: "brickbuilders2025@gmail.com",
     revealThreshold: 0.12,
     revealRootMargin: "0px 0px -55px 0px"
 };
@@ -524,14 +524,41 @@ function initConstructionCanvas() {
    --------------------------------------------------------- */
 
 function initProjectGalleries() {
+    const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches;
+
     document.querySelectorAll(".project-gallery").forEach((gallery) => {
         const slides = [...gallery.querySelectorAll(".project-slide")];
         const previous = gallery.querySelector("[data-slide-prev]");
         const next = gallery.querySelector("[data-slide-next]");
         const counter = gallery.querySelector(".project-slide-count");
         let current = 0;
+        let timer;
+        let isVisible = !("IntersectionObserver" in window);
 
         if (!slides.length || !previous || !next || !counter) return;
+
+        function stopAutoplay() {
+            window.clearInterval(timer);
+            timer = undefined;
+        }
+
+        function startAutoplay() {
+            stopAutoplay();
+            if (
+                reducedMotion ||
+                slides.length < 2 ||
+                document.hidden ||
+                !isVisible
+            ) return;
+
+            timer = window.setInterval(() => {
+                const activeVideo = slides[current].querySelector("video");
+                if (activeVideo && !activeVideo.paused) return;
+                showSlide(current + 1);
+            }, 4000);
+        }
 
         function showSlide(index) {
             current = (index + slides.length) % slides.length;
@@ -545,16 +572,56 @@ function initProjectGalleries() {
             });
             counter.textContent =
                 `${String(current + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+
+            const activeVideo = slides[current].querySelector("video");
+            if (activeVideo && !reducedMotion && isVisible) {
+                activeVideo.play().catch((error) => {
+                    console.warn("Unable to autoplay project video:", error);
+                });
+            }
         }
 
-        previous.addEventListener("click", () => showSlide(current - 1));
-        next.addEventListener("click", () => showSlide(current + 1));
+        previous.addEventListener("click", () => {
+            showSlide(current - 1);
+            startAutoplay();
+        });
+        next.addEventListener("click", () => {
+            showSlide(current + 1);
+            startAutoplay();
+        });
+        gallery.querySelectorAll("video").forEach((video) => {
+            video.addEventListener("play", stopAutoplay);
+            video.addEventListener("pause", startAutoplay);
+            video.addEventListener("ended", () => {
+                if (slides[current].contains(video)) {
+                    showSlide(current + 1);
+                    startAutoplay();
+                }
+            });
+        });
+        if ("IntersectionObserver" in window) {
+            const observer = new IntersectionObserver(([entry]) => {
+                isVisible = entry.isIntersecting;
+                if (isVisible) {
+                    startAutoplay();
+                } else {
+                    stopAutoplay();
+                    slides[current].querySelector("video")?.pause();
+                }
+            }, { threshold: 0.15 });
+            observer.observe(gallery);
+        }
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) stopAutoplay();
+            else startAutoplay();
+        });
         showSlide(0);
+        startAutoplay();
     });
 }
 
 /* ---------------------------------------------------------
-   CONTACT / WHATSAPP
+   CONTACT / EMAIL
    --------------------------------------------------------- */
 
 function initContactForm() {
@@ -570,7 +637,8 @@ function initContactForm() {
         const projectType = document.getElementById("projectType")?.value || "";
         const message = getValue("message");
 
-        const text = [
+        const subject = "New BRICKBUILDERS project enquiry";
+        const body = [
             "Hello BRICKBUILDERS,",
             "",
             "I would like to discuss a project.",
@@ -582,14 +650,10 @@ function initContactForm() {
             `Message: ${message || "Not provided"}`
         ].join("\n");
 
-        const whatsappUrl =
-            `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(text)}`;
+        const mailtoUrl =
+            `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-        window.open(
-            whatsappUrl,
-            "_blank",
-            "noopener,noreferrer"
-        );
+        window.location.href = mailtoUrl;
     });
 }
 
