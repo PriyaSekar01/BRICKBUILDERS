@@ -520,112 +520,37 @@ function initConstructionCanvas() {
 }
 
 /* ---------------------------------------------------------
-   PROJECT IMAGE PARALLAX
+   PROJECT GALLERIES
    --------------------------------------------------------- */
 
-function initProjectParallax() {
-    const images = document.querySelectorAll(".project-image");
+function initProjectGalleries() {
+    document.querySelectorAll(".project-gallery").forEach((gallery) => {
+        const slides = [...gallery.querySelectorAll(".project-slide")];
+        const previous = gallery.querySelector("[data-slide-prev]");
+        const next = gallery.querySelector("[data-slide-next]");
+        const counter = gallery.querySelector(".project-slide-count");
+        let current = 0;
 
-    if (!images.length) return;
+        if (!slides.length || !previous || !next || !counter) return;
 
-    const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    const touchDevice = window.matchMedia(
-        "(hover: none) and (pointer: coarse)"
-    ).matches;
-
-    if (reducedMotion || touchDevice) return;
-
-    let ticking = false;
-
-    function update() {
-        const viewport = window.innerHeight;
-
-        images.forEach((image) => {
-            const rect = image.getBoundingClientRect();
-
-            if (rect.bottom < 0 || rect.top > viewport) return;
-
-            const center = rect.top + rect.height / 2;
-            const distance = (center - viewport / 2) / viewport;
-            const offset = Math.max(-4, Math.min(4, distance * -4));
-
-            image.style.backgroundPosition =
-                `center calc(50% + ${offset}px)`;
-        });
-
-        ticking = false;
-    }
-
-    function requestUpdate() {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(update);
-    }
-
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate, { passive: true });
-    update();
-}
-
-/* ---------------------------------------------------------
-   PROJECT SLIDER
-   --------------------------------------------------------- */
-
-function initProjectSlider() {
-    const slider = document.querySelector(".projects-slider");
-    if (!slider) return;
-
-    const slides = [...slider.querySelectorAll(".project-card")];
-    const dots = [...slider.querySelectorAll(".project-dot")];
-    const previous = slider.querySelector("[data-project-prev]");
-    const next = slider.querySelector("[data-project-next]");
-    const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    ).matches;
-    let current = 0;
-    let timer;
-
-    function showProject(index) {
-        current = (index + slides.length) % slides.length;
-        slides.forEach((slide, slideIndex) => {
-            slide.classList.toggle("is-active", slideIndex === current);
-        });
-        dots.forEach((dot, dotIndex) => {
-            const active = dotIndex === current;
-            dot.classList.toggle("is-active", active);
-            dot.setAttribute("aria-selected", String(active));
-        });
-    }
-
-    function restartTimer() {
-        window.clearInterval(timer);
-        if (!reducedMotion) {
-            timer = window.setInterval(() => showProject(current + 1), 6500);
+        function showSlide(index) {
+            current = (index + slides.length) % slides.length;
+            slides.forEach((slide, slideIndex) => {
+                const active = slideIndex === current;
+                slide.hidden = !active;
+                slide.setAttribute("aria-hidden", String(!active));
+                if (!active) {
+                    slide.querySelector("video")?.pause();
+                }
+            });
+            counter.textContent =
+                `${String(current + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
         }
-    }
 
-    previous?.addEventListener("click", () => {
-        showProject(current - 1);
-        restartTimer();
+        previous.addEventListener("click", () => showSlide(current - 1));
+        next.addEventListener("click", () => showSlide(current + 1));
+        showSlide(0);
     });
-
-    next?.addEventListener("click", () => {
-        showProject(current + 1);
-        restartTimer();
-    });
-
-    dots.forEach((dot, index) => {
-        dot.addEventListener("click", () => {
-            showProject(index);
-            restartTimer();
-        });
-    });
-
-    showProject(0);
-    restartTimer();
 }
 
 /* ---------------------------------------------------------
@@ -715,8 +640,7 @@ function init() {
     initLetterAnimation();
     initHeroParallax();
     initConstructionCanvas();
-    initProjectParallax();
-    initProjectSlider();
+    initProjectGalleries();
     initContactForm();
     initFooterYear();
 }
