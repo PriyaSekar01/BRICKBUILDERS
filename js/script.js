@@ -560,8 +560,18 @@ function initProjectGalleries() {
             }, 4000);
         }
 
+        function getAvailableSlides() {
+            return slides.filter((slide) => slide.dataset.broken !== "true");
+        }
+
         function showSlide(index) {
-            current = (index + slides.length) % slides.length;
+            const availableSlides = getAvailableSlides();
+            if (!availableSlides.length) return;
+
+            const normalizedIndex = (index + availableSlides.length) % availableSlides.length;
+            const targetSlide = availableSlides[normalizedIndex];
+            current = slides.indexOf(targetSlide);
+
             slides.forEach((slide, slideIndex) => {
                 const active = slideIndex === current;
                 slide.hidden = !active;
@@ -571,7 +581,7 @@ function initProjectGalleries() {
                 }
             });
             counter.textContent =
-                `${String(current + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+                `${String(normalizedIndex + 1).padStart(2, "0")} / ${String(availableSlides.length).padStart(2, "0")}`;
 
             const activeVideo = slides[current].querySelector("video");
             if (activeVideo && !reducedMotion && isVisible) {
@@ -590,6 +600,16 @@ function initProjectGalleries() {
             startAutoplay();
         });
         gallery.querySelectorAll("video").forEach((video) => {
+            video.addEventListener("error", () => {
+                const slide = video.closest(".project-slide");
+                if (slide) {
+                    slide.dataset.broken = "true";
+                    slide.hidden = true;
+                }
+                if (slides[current] === slide) {
+                    showSlide(current + 1);
+                }
+            });
             video.addEventListener("play", stopAutoplay);
             video.addEventListener("pause", startAutoplay);
             video.addEventListener("ended", () => {
