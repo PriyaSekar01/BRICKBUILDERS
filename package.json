@@ -5,6 +5,7 @@
   "description": "BRICKBUILDERS website and Vercel enquiry API",
   "dependencies": {
     "@vercel/blob": "^2.8.0",
+    "@vercel/functions": "^3.9.9",
     "nodemailer": "^10.0.13"
   }
 }

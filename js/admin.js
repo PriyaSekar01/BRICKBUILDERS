@@ -17,6 +17,7 @@ const existingProjectHelp = document.getElementById("existingProjectHelp");
 const existingProjectTitle = document.getElementById("existingProjectTitle");
 const renameProjectForm = document.getElementById("renameProjectForm");
 const renameProjectButton = document.getElementById("renameProjectButton");
+const deleteProjectButton = document.getElementById("deleteProjectButton");
 const existingMediaList = document.getElementById("existingMediaList");
 const logoutButton = document.getElementById("adminLogout");
 const MAX_IMAGE_BYTES = 2.5 * 1024 * 1024;
@@ -164,13 +165,25 @@ async function handleLogin(event) {
 
 async function setNextProjectTitle() {
     await refreshUploadedProjects();
-    titleInput.value = `Project ${uploadedProjects.length + 1}`;
+    setNextProjectTitleFromList();
+}
+
+function setNextProjectTitleFromList() {
+    const projectNumbers = uploadedProjects
+        .map((project) => /^Project\s+(\d+)$/i.exec(project.title)?.[1])
+        .filter(Boolean)
+        .map(Number);
+    titleInput.value = `Project ${Math.max(0, ...projectNumbers) + 1}`;
 }
 
 async function refreshUploadedProjects() {
     const response = await fetch("/api/projects", { cache: "no-store" });
     const data = await readResponse(response);
     uploadedProjects = data.projects;
+    renderProjectOptions();
+}
+
+function renderProjectOptions() {
     const selectedId = existingProjectSelect.value;
     existingProjectSelect.replaceChildren(new Option("Choose a project", ""));
 
@@ -186,8 +199,17 @@ async function refreshUploadedProjects() {
     if (uploadedProjects.some((project) => project.id === selectedId)) {
         existingProjectSelect.value = selectedId;
     }
+    deleteProjectButton.disabled = !existingProjectSelect.value;
     renderExistingProject();
     updateAdditionalPhotoLimit();
+}
+
+function updateProjectInList(updatedProject) {
+    uploadedProjects = uploadedProjects.map((project) =>
+        project.id === updatedProject.id ? updatedProject : project
+    );
+    existingProjectSelect.value = updatedProject.id;
+    renderProjectOptions();
 }
 
 function getProjectMedia(project) {
@@ -322,10 +344,10 @@ async function handleAddPhotos(event) {
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ action: "add-images", id: project.id, imageUrls: newImageUrls })
         });
-        await readResponse(response);
+        const result = await readResponse(response);
         addPhotosForm.reset();
         renderAdditionalPreview();
-        await refreshUploadedProjects();
+        updateProjectInList(result.project);
         setStatus(`Added ${files.length} photo${files.length === 1 ? "" : "s"} to ${project.title}.`);
     } catch (error) {
         setStatus(error.message, true);
@@ -356,8 +378,8 @@ async function handleRenameProject(event) {
                 title: existingProjectTitle.value
             })
         });
-        await readResponse(response);
-        await refreshUploadedProjects();
+        const result = await readResponse(response);
+        updateProjectInList(result.project);
         setStatus("Project name updated.");
     } catch (error) {
         setStatus(error.message, true);
@@ -374,6 +396,7 @@ async function handleRemoveMedia(mediaUrl, button) {
     if (!window.confirm("Remove this slide from the project?")) return;
 
     button.disabled = true;
+    setStatus("Removing slide…");
     try {
         const response = await fetch("/api/admin/projects", {
             method: "PATCH",
@@ -384,12 +407,44 @@ async function handleRemoveMedia(mediaUrl, button) {
                 mediaUrl
             })
         });
-        await readResponse(response);
-        await refreshUploadedProjects();
+        const result = await readResponse(response);
+        updateProjectInList(result.project);
         setStatus("Project slide deleted.");
     } catch (error) {
         setStatus(error.message, true);
         button.disabled = false;
+    }
+}
+
+async function handleDeleteProject() {
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    if (!project) {
+        setStatus("Choose a project first.", true);
+        return;
+    }
+    if (!window.confirm(`Permanently delete ${project.title} and remove all its slides?`)) {
+        return;
+    }
+
+    deleteProjectButton.disabled = true;
+    setStatus(`Deleting ${project.title}…`);
+    try {
+        const response = await fetch("/api/admin/projects", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ id: project.id })
+        });
+        await readResponse(response);
+        uploadedProjects = uploadedProjects.filter((item) => item.id !== project.id);
+        existingProjectSelect.value = "";
+        renderProjectOptions();
+        setNextProjectTitleFromList();
+        setStatus(`${project.title} was deleted from the gallery.`);
+    } catch (error) {
+        setStatus(error.message, true);
+        deleteProjectButton.disabled = false;
     }
 }
 
@@ -413,10 +468,12 @@ async function init() {
     projectForm.addEventListener("submit", handleProjectSubmit);
     addPhotosForm.addEventListener("submit", handleAddPhotos);
     renameProjectForm.addEventListener("submit", handleRenameProject);
+    deleteProjectButton.addEventListener("click", handleDeleteProject);
     logoutButton.addEventListener("click", handleLogout);
     imageInput.addEventListener("change", renderPreview);
     additionalImagesInput.addEventListener("change", renderAdditionalPreview);
     existingProjectSelect.addEventListener("change", () => {
+        deleteProjectButton.disabled = !existingProjectSelect.value;
         renderExistingProject();
         updateAdditionalPhotoLimit();
     });

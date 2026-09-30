@@ -2,10 +2,12 @@
 
 const { hasValidSession, isSameOrigin } = require("../../lib/admin-auth");
 const { del } = require("@vercel/blob");
+const { waitUntil } = require("@vercel/functions");
 const {
     MAX_PROJECTS,
-    readProjects,
-    saveProjects,
+    defaultProjects,
+    readProjectData,
+    saveProjectData,
     validateProject
 } = require("../../lib/project-store");
 
@@ -14,9 +16,48 @@ function respond(res, statusCode, payload) {
     return res.status(statusCode).json(payload);
 }
 
+function scheduleBlobCleanup(urls, remainingProjects) {
+    const stillUsedUrls = new Set(
+        remainingProjects.flatMap((project) => [
+            ...project.imageUrls,
+            ...(project.videoUrls || [])
+        ])
+    );
+    const unusedBlobUrls = [...new Set(urls)].filter((url) => {
+        if (stillUsedUrls.has(url)) return false;
+        try {
+            const parsed = new URL(url);
+            return parsed.protocol === "https:" &&
+                parsed.hostname.endsWith(".public.blob.vercel-storage.com");
+        } catch {
+            return false;
+        }
+    });
+
+    if (!unusedBlobUrls.length) return;
+
+    const cleanup = Promise.allSettled(unusedBlobUrls.map((url) => del(url)))
+        .then((results) => {
+            results.forEach((result, index) => {
+                if (result.status === "rejected") {
+                    console.error("Unable to delete unused project image from Blob:", {
+                        pathname: new URL(unusedBlobUrls[index]).pathname,
+                        error: result.reason
+                    });
+                }
+            });
+        });
+
+    try {
+        waitUntil(cleanup);
+    } catch (error) {
+        console.error("Unable to schedule project image cleanup:", error);
+    }
+}
+
 module.exports = async function adminProjects(req, res) {
-    if (req.method !== "POST" && req.method !== "PATCH") {
-        res.setHeader("Allow", "POST, PATCH");
+    if (req.method !== "POST" && req.method !== "PATCH" && req.method !== "DELETE") {
+        res.setHeader("Allow", "POST, PATCH, DELETE");
         return respond(res, 405, { message: "Method not allowed." });
     }
 
@@ -35,7 +76,28 @@ module.exports = async function adminProjects(req, res) {
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
     try {
-        const projects = await readProjects();
+        const projectData = await readProjectData();
+        const projects = projectData.projects;
+
+        if (req.method === "DELETE") {
+            const id = typeof body.id === "string" ? body.id : "";
+            const projectIndex = projects.findIndex((project) => project.id === id);
+            if (projectIndex < 0) {
+                return respond(res, 404, { message: "That project could not be found." });
+            }
+
+            const [deletedProject] = projects.splice(projectIndex, 1);
+            const deletedIds = defaultProjects.some((project) => project.id === id)
+                ? [...new Set([...projectData.deletedIds, id])]
+                : projectData.deletedIds;
+            await saveProjectData({ projects, deletedIds });
+            scheduleBlobCleanup(
+                [...deletedProject.imageUrls, ...(deletedProject.videoUrls || [])],
+                projects
+            );
+            return respond(res, 200, { success: true, deletedId: id });
+        }
+
         if (req.method === "PATCH") {
             const id = typeof body.id === "string" ? body.id : "";
             const projectIndex = projects.findIndex((project) => project.id === id);
@@ -89,19 +151,10 @@ module.exports = async function adminProjects(req, res) {
 
             const updatedProjects = [...projects];
             updatedProjects[projectIndex] = updatedProject;
-            await saveProjects(updatedProjects);
+            await saveProjectData({ ...projectData, projects: updatedProjects });
 
-            if (body.action === "remove-media" &&
-                typeof body.mediaUrl === "string" &&
-                body.mediaUrl.includes(".public.blob.vercel-storage.com/")) {
-                try {
-                    await del(body.mediaUrl);
-                } catch (error) {
-                    console.error("Project slide removed but stored image cleanup failed:", error);
-                    return respond(res, 502, {
-                        message: "The slide was removed from the gallery, but its stored image could not be deleted."
-                    });
-                }
+            if (body.action === "remove-media") {
+                scheduleBlobCleanup([body.mediaUrl], updatedProjects);
             }
             return respond(res, 200, { project: updatedProject });
         }
@@ -122,7 +175,10 @@ module.exports = async function adminProjects(req, res) {
             videoUrls: [],
             createdAt: new Date().toISOString()
         };
-        await saveProjects([...projects, project]);
+        await saveProjectData({
+            ...projectData,
+            projects: [...projects, project]
+        });
         return respond(res, 201, { project });
     } catch (error) {
         console.error("Unable to save gallery project:", error);
