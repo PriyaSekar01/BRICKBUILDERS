@@ -1,0 +1,9 @@
+{
+  "name": "brickbuilders-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BRICKBUILDERS website and Vercel enquiry API",
+  "dependencies": {
+    "nodemailer": "^10.0.13"
+  }
+}

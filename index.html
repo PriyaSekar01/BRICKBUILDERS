@@ -610,7 +610,13 @@
                     </div>
                 </div>
 
-                <form class="contact-form glass-panel reveal-right" id="contactForm">
+                <form class="contact-form glass-panel reveal-right"
+                      id="contactForm"
+                      action="/api/contact"
+                      method="POST">
+                    <input type="text" name="_honey" tabindex="-1" autocomplete="off"
+                           aria-hidden="true" style="display:none">
+
                     <div class="form-header">
                         <span>START A CONVERSATION</span>
                         <i></i>
@@ -619,23 +625,23 @@
                     <div class="form-row">
                         <label>
                             Your name
-                            <input type="text" id="name" placeholder="Your name" required>
+                            <input type="text" id="name" name="name" placeholder="Your name" required>
                         </label>
 
                         <label>
                             Phone
-                            <input type="tel" id="phone" placeholder="+91..." required>
+                            <input type="tel" id="phone" name="phone" placeholder="+91..." required>
                         </label>
                     </div>
 
                     <label>
                         Email
-                        <input type="email" id="email" placeholder="you@example.com">
+                        <input type="email" id="email" name="email" placeholder="you@example.com">
                     </label>
 
                     <label>
                         Project type
-                        <select id="projectType">
+                        <select id="projectType" name="projectType" required>
                             <option value="">Select project type</option>
                             <option>Residential Construction</option>
                             <option>Commercial Construction</option>
@@ -647,7 +653,7 @@
 
                     <label>
                         Tell us about your project
-                        <textarea id="message" rows="5"
+                        <textarea id="message" name="message" rows="5"
                                   placeholder="Briefly describe your project..."></textarea>
                     </label>
 
@@ -656,8 +662,9 @@
                     </button>
 
                     <p class="form-note">
-                        Your email app will open with your enquiry ready to send.
+                        Name, phone and project type are required. Email and project description are optional.
                     </p>
+                    <p class="form-note" id="contactFormStatus" role="status" aria-live="polite"></p>
                 </form>
             </div>
         </section>

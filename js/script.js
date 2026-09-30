@@ -12,7 +12,6 @@ const contactForm = document.getElementById("contactForm");
 const yearElement = document.getElementById("year");
 
 const CONFIG = {
-    contactEmail: "brickbuilders2025@gmail.com",
     revealThreshold: 0.12,
     revealRootMargin: "0px 0px -55px 0px"
 };
@@ -641,39 +640,58 @@ function initProjectGalleries() {
 }
 
 /* ---------------------------------------------------------
-   CONTACT / EMAIL
+   CONTACT FORM
    --------------------------------------------------------- */
 
 function initContactForm() {
-    contactForm?.addEventListener("submit", (event) => {
+    if (!(contactForm instanceof HTMLFormElement)) return;
+
+    const status = document.getElementById("contactFormStatus");
+    const submitButton = contactForm.querySelector('button[type="submit"]');
+    if (!(status instanceof HTMLElement) || !(submitButton instanceof HTMLButtonElement)) return;
+
+    contactForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        submitButton.disabled = true;
+        status.textContent = "Sending your enquiry…";
 
-        const getValue = (id) =>
-            document.getElementById(id)?.value.trim() || "";
+        try {
+            const response = await fetch(contactForm.action, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json"
+                },
+                body: JSON.stringify(Object.fromEntries(new FormData(contactForm)))
+            });
+            const responseText = await response.text();
+            let result;
 
-        const name = getValue("name");
-        const phone = getValue("phone");
-        const email = getValue("email");
-        const projectType = document.getElementById("projectType")?.value || "";
-        const message = getValue("message");
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error("Contact API returned an invalid response:", response.status, error);
+                status.textContent =
+                    "The enquiry service returned an unexpected response. Please call +91 9003758369.";
+                return;
+            }
 
-        const subject = "New BRICKBUILDERS project enquiry";
-        const body = [
-            "Hello BRICKBUILDERS,",
-            "",
-            "I would like to discuss a project.",
-            "",
-            `Name: ${name || "Not provided"}`,
-            `Phone: ${phone || "Not provided"}`,
-            `Email: ${email || "Not provided"}`,
-            `Project Type: ${projectType || "Not selected"}`,
-            `Message: ${message || "Not provided"}`
-        ].join("\n");
+            if (!response.ok || result.success !== true) {
+                status.textContent = typeof result.message === "string"
+                    ? result.message
+                    : "We couldn't send your enquiry. Please call +91 9003758369.";
+                return;
+            }
 
-        const mailtoUrl =
-            `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-        window.location.href = mailtoUrl;
+            contactForm.reset();
+            status.textContent = "Thank you. Your enquiry has been sent.";
+        } catch (error) {
+            console.error("Contact form submission failed:", error);
+            status.textContent =
+                "Couldn't connect to the enquiry service. Please try again or call +91 9003758369.";
+        } finally {
+            submitButton.disabled = false;
+        }
     });
 }
 
