@@ -53,10 +53,12 @@ function closeMobileMenu() {
    SCROLL REVEAL
    --------------------------------------------------------- */
 
-function initScrollReveal() {
-    const elements = document.querySelectorAll(
-        ".reveal, .reveal-left, .reveal-right, .reveal-scale"
-    );
+function initScrollReveal(root = document) {
+    const selector = ".reveal, .reveal-left, .reveal-right, .reveal-scale";
+    const elements = [
+        ...(root instanceof Element && root.matches(selector) ? [root] : []),
+        ...root.querySelectorAll(selector)
+    ];
 
     if (!elements.length) return;
 
@@ -644,7 +646,7 @@ function initProjectGalleries(root = document) {
 
 function createUploadedProjectCard(project) {
     const card = document.createElement("article");
-    card.className = "project-card card reveal-scale";
+    card.className = "project-card card is-visible";
     card.dataset.uploadedProject = "true";
     card.setAttribute("aria-label", project.title);
 
@@ -701,7 +703,11 @@ async function loadUploadedProjects() {
     if (!projectsGrid) return;
 
     try {
-        const response = await fetch("/api/projects", { cache: "no-store" });
+        const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        const projectsEndpoint = isLocalPreview
+            ? "https://www.brickbuilders.in/api/projects"
+            : "/api/projects";
+        const response = await fetch(projectsEndpoint, { cache: "no-store" });
         if (!response.ok) {
             throw new Error(`Project list request failed (HTTP ${response.status}).`);
         }

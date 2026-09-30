@@ -10,6 +10,8 @@ module.exports = async function projects(req, res) {
         return res.status(405).json({ message: "Method not allowed." });
     }
 
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     try {
         const items = await readProjects();
         return res.status(200).json({ projects: items });
