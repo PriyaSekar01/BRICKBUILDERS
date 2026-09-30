@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#090b0f">
+    <title>Project Admin | BRICKBUILDERS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="js/admin.js" defer></script>
+</head>
+<body class="admin-page">
+    <main class="admin-shell">
+        <a class="admin-back-link" href="/#projects">← Back to BRICKBUILDERS</a>
+
+        <section class="admin-panel glass-panel" aria-labelledby="adminTitle">
+            <p class="section-kicker">BRICKBUILDERS</p>
+            <h1 id="adminTitle">Project gallery</h1>
+            <p class="admin-intro">Sign in to add a project and its photos to the website.</p>
+
+            <form id="adminLoginForm" class="admin-form" hidden>
+                <label>
+                    Admin password
+                    <input type="password" name="password" autocomplete="current-password"
+                           required minlength="8">
+                </label>
+                <button class="btn btn-primary" type="submit">Sign in</button>
+            </form>
+
+            <section id="adminDashboard" hidden aria-labelledby="addProjectTitle">
+                <div class="admin-dashboard-heading">
+                    <h2 id="addProjectTitle">Add a project</h2>
+                    <button id="adminLogout" class="admin-quiet-button" type="button">Sign out</button>
+                </div>
+
+                <form id="projectUploadForm" class="admin-form">
+                    <label>
+                        Project name
+                        <input id="projectTitle" name="title" type="text"
+                               maxlength="80" required>
+                    </label>
+                    <label>
+                        Project photos
+                        <input id="projectImages" name="images" type="file"
+                               accept="image/jpeg,image/png,image/webp" multiple required>
+                    </label>
+                    <p class="admin-help">Choose up to 12 JPEG, PNG, or WebP photos. Large images are resized before upload.</p>
+                    <div id="imagePreview" class="admin-preview" aria-live="polite"></div>
+                    <button id="addProjectButton" class="btn btn-primary" type="submit">
+                        Upload and add project
+                    </button>
+                </form>
+            </section>
+
+            <p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+</body>
+</html>

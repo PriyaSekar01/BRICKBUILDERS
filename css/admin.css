@@ -1,0 +1,154 @@
+.admin-page {
+    min-height: 100vh;
+    padding: 32px 18px;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(216,137,18,.14), transparent 34%),
+        #090b0f;
+}
+
+.admin-shell {
+    width: min(100%, 640px);
+    margin: 0 auto;
+}
+
+.admin-back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: var(--gold-light);
+    font-size: 13px;
+}
+
+.admin-panel {
+    padding: clamp(22px, 5vw, 40px);
+    border-radius: 22px;
+}
+
+.admin-panel h1 {
+    margin: 8px 0;
+    color: #fff;
+    font-size: clamp(28px, 7vw, 42px);
+}
+
+.admin-intro,
+.admin-help {
+    color: rgba(255,255,255,.68);
+    line-height: 1.65;
+}
+
+.admin-dashboard-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 28px 0 16px;
+}
+
+.admin-dashboard-heading h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 21px;
+}
+
+.admin-form {
+    display: grid;
+    gap: 18px;
+    margin-top: 24px;
+}
+
+.admin-form[hidden],
+#adminDashboard[hidden] {
+    display: none;
+}
+
+.admin-form label {
+    display: grid;
+    gap: 8px;
+    color: rgba(255,255,255,.82);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.admin-form input {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px;
+    outline: none;
+    color: #fff;
+    background: rgba(255,255,255,.07);
+}
+
+.admin-form input:focus-visible {
+    border-color: var(--gold-light);
+    box-shadow: 0 0 0 3px rgba(255,196,91,.16);
+}
+
+.admin-form input[type="file"] {
+    padding: 8px;
+}
+
+.admin-form input[type="file"]::file-selector-button {
+    min-height: 30px;
+    margin-right: 12px;
+    border: 0;
+    border-radius: 7px;
+    padding: 5px 10px;
+    color: #17130c;
+    background: var(--gold-light);
+    font-weight: 700;
+}
+
+.admin-help {
+    margin: -10px 0 0;
+    font-size: 12px;
+}
+
+.admin-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.admin-preview figure {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 9px;
+    background: rgba(255,255,255,.05);
+}
+
+.admin-preview img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+.admin-preview figcaption {
+    overflow: hidden;
+    padding: 7px;
+    color: rgba(255,255,255,.72);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-quiet-button {
+    border: 0;
+    color: var(--gold-light);
+    background: transparent;
+    cursor: pointer;
+}
+
+.admin-status {
+    min-height: 22px;
+    margin: 20px 0 0;
+    color: var(--gold-light);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.admin-status[data-error="true"] {
+    color: #ffaaaa;
+}

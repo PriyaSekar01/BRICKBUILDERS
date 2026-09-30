@@ -522,12 +522,15 @@ function initConstructionCanvas() {
    PROJECT GALLERIES
    --------------------------------------------------------- */
 
-function initProjectGalleries() {
+function initProjectGalleries(root = document) {
     const reducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
     ).matches;
 
-    document.querySelectorAll(".project-gallery").forEach((gallery) => {
+    root.querySelectorAll(".project-gallery").forEach((gallery) => {
+        if (gallery.dataset.initialized === "true") return;
+        gallery.dataset.initialized = "true";
+
         const slides = [...gallery.querySelectorAll(".project-slide")];
         const previous = gallery.querySelector("[data-slide-prev]");
         const next = gallery.querySelector("[data-slide-next]");
@@ -639,6 +642,94 @@ function initProjectGalleries() {
     });
 }
 
+function createUploadedProjectCard(project) {
+    const card = document.createElement("article");
+    card.className = "project-card card reveal-scale";
+    card.dataset.uploadedProject = "true";
+    card.setAttribute("aria-label", project.title);
+
+    const heading = document.createElement("div");
+    heading.className = "project-card-heading";
+    const title = document.createElement("span");
+    title.textContent = project.title;
+    heading.append(title);
+
+    const gallery = document.createElement("div");
+    gallery.className = "project-gallery";
+    gallery.setAttribute("aria-label", `${project.title} photos`);
+    const track = document.createElement("div");
+    track.className = "project-gallery-track";
+
+    project.imageUrls.forEach((url, index) => {
+        const slide = document.createElement("figure");
+        slide.className = "project-slide";
+        slide.hidden = index !== 0;
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = `${project.title}, photo ${index + 1}`;
+        image.loading = "lazy";
+        image.decoding = "async";
+        slide.append(image);
+        track.append(slide);
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "project-gallery-controls";
+    const previous = document.createElement("button");
+    previous.className = "project-control";
+    previous.type = "button";
+    previous.dataset.slidePrev = "";
+    previous.setAttribute("aria-label", `Previous ${project.title} photo`);
+    previous.textContent = "←";
+    const counter = document.createElement("span");
+    counter.className = "project-slide-count";
+    counter.setAttribute("aria-live", "polite");
+    const next = document.createElement("button");
+    next.className = "project-control";
+    next.type = "button";
+    next.dataset.slideNext = "";
+    next.setAttribute("aria-label", `Next ${project.title} photo`);
+    next.textContent = "→";
+    controls.append(previous, counter, next);
+    gallery.append(track, controls);
+    card.append(heading, gallery);
+    return card;
+}
+
+async function loadUploadedProjects() {
+    const projectsGrid = document.querySelector(".projects-grid");
+    if (!projectsGrid) return;
+
+    try {
+        const response = await fetch("/api/projects", { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error(`Project list request failed (HTTP ${response.status}).`);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data.projects)) {
+            throw new Error("Project list has an invalid format.");
+        }
+
+        data.projects.forEach((project) => {
+            if (
+                typeof project.title !== "string" ||
+                !Array.isArray(project.imageUrls) ||
+                project.imageUrls.length === 0 ||
+                !project.imageUrls.every((url) => typeof url === "string")
+            ) {
+                console.error("Skipping invalid uploaded project entry:", project);
+                return;
+            }
+
+            const card = createUploadedProjectCard(project);
+            projectsGrid.append(card);
+            initProjectGalleries(card);
+        });
+    } catch (error) {
+        console.error("Unable to load uploaded gallery projects:", error);
+    }
+}
+
 /* ---------------------------------------------------------
    CONTACT FORM
    --------------------------------------------------------- */
@@ -743,6 +834,7 @@ function init() {
     initHeroParallax();
     initConstructionCanvas();
     initProjectGalleries();
+    loadUploadedProjects();
     initContactForm();
     initFooterYear();
 }

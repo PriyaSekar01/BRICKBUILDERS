@@ -20,9 +20,28 @@ The contact form sends to the Vercel function at /api/contact. To enable email d
     SMTP_SECURE     true for port 465; false for port 587
     SMTP_USER       SMTP account username
     SMTP_PASS       SMTP password or provider-specific app password
-    CONTACT_EMAIL   Recipient address (currently intended for testing: priyasekar0137@gmail.com)
+    CONTACT_EMAIL   Recipient address (BRICKBUILDERS inbox)
     SMTP_FROM       Optional sender address; defaults to SMTP_USER
 
 For Gmail SMTP, use smtp.gmail.com, port 465, SMTP_SECURE=true, your Gmail address as SMTP_USER, and a Google App Password as SMTP_PASS. Do not put email passwords in website code or commit them. The API endpoint cannot send mail until the SMTP settings are configured in Vercel.
 
 For local end-to-end testing, link this folder to the Vercel project and pull its development environment variables with `vercel env pull .env.development.local`. The local environment file is ignored by Git.
+
+PRIVATE PROJECT UPLOADS
+After deploying the project, open /admin.html on the website to sign in and add projects. Uploaded photos are public because they appear in the public project gallery; only the upload controls and API are password-protected.
+
+Create a Vercel Blob store for the project:
+
+    1. Open the Vercel project's Storage tab and create a Blob store.
+    2. Choose Public access, since visitors need to load the project photos.
+    3. Connect the store to this project and enable Production (and Preview/Development if needed).
+    4. Vercel adds BLOB_READ_WRITE_TOKEN to the selected environment(s).
+
+Add these two Secret environment variables in Vercel:
+
+    ADMIN_PASSWORD         A private password with at least 8 characters (longer is safer)
+    ADMIN_SESSION_SECRET   A separate random secret with at least 32 characters
+
+Generate separate random values locally with `openssl rand -base64 32`. Save ADMIN_PASSWORD in a password manager so it can be used to sign in at /admin.html. Never put either secret in website code or chat. Redeploy after adding environment variables.
+
+The admin page supports up to 12 JPEG, PNG, or WebP photos per project. Images are resized in the browser when needed and uploaded individually to Vercel Blob. New projects are stored in the Blob store and loaded into the public gallery slides.
