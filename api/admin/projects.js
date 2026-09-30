@@ -14,8 +14,8 @@ function respond(res, statusCode, payload) {
 }
 
 module.exports = async function adminProjects(req, res) {
-    if (req.method !== "POST") {
-        res.setHeader("Allow", "POST");
+    if (req.method !== "POST" && req.method !== "PATCH") {
+        res.setHeader("Allow", "POST, PATCH");
         return respond(res, 405, { message: "Method not allowed." });
     }
 
@@ -35,13 +35,40 @@ module.exports = async function adminProjects(req, res) {
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const imageUrls = body.imageUrls;
-    const validationError = validateProject(title, imageUrls);
+    const validationError = validateProject(
+        req.method === "PATCH" ? "Existing project" : title,
+        imageUrls
+    );
     if (validationError) {
         return respond(res, 400, { message: validationError });
     }
 
     try {
         const projects = await readProjects();
+        if (req.method === "PATCH") {
+            const id = typeof body.id === "string" ? body.id : "";
+            const projectIndex = projects.findIndex((project) => project.id === id);
+            if (projectIndex < 0) {
+                return respond(res, 404, { message: "That project could not be found." });
+            }
+
+            const project = projects[projectIndex];
+            if (project.imageUrls.length + imageUrls.length > 12) {
+                return respond(res, 400, {
+                    message: "A project can have up to 12 photos. Choose fewer additional photos."
+                });
+            }
+
+            const updatedProject = {
+                ...project,
+                imageUrls: [...project.imageUrls, ...imageUrls]
+            };
+            const updatedProjects = [...projects];
+            updatedProjects[projectIndex] = updatedProject;
+            await saveProjects(updatedProjects);
+            return respond(res, 200, { project: updatedProject });
+        }
+
         if (projects.length >= MAX_PROJECTS) {
             return respond(res, 400, { message: "The project gallery has reached its limit." });
         }

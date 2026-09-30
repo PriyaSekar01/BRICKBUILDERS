@@ -44,4 +44,4 @@ Add these two Secret environment variables in Vercel:
 
 Generate separate random values locally with `openssl rand -base64 32`. Save ADMIN_PASSWORD in a password manager so it can be used to sign in at /admin.html. Never put either secret in website code or chat. Redeploy after adding environment variables.
 
-The admin page supports up to 12 JPEG, PNG, or WebP photos per project. Images are resized in the browser when needed and uploaded individually to Vercel Blob. New projects are stored in the Blob store and loaded into the public gallery slides.
+The admin page supports up to 12 JPEG, PNG, or WebP photos per project. Select multiple files together to create a gallery, or use "Add photos to an existing project" to append slides to a previously uploaded project (including Project 5). Images are resized in the browser when needed and uploaded individually to Vercel Blob. New projects are stored in the Blob store and loaded into the public gallery slides after refreshing the homepage.

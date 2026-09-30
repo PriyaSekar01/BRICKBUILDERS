@@ -8,11 +8,19 @@ const titleInput = document.getElementById("projectTitle");
 const imageInput = document.getElementById("projectImages");
 const preview = document.getElementById("imagePreview");
 const addProjectButton = document.getElementById("addProjectButton");
+const addPhotosForm = document.getElementById("addPhotosForm");
+const existingProjectSelect = document.getElementById("existingProjectSelect");
+const additionalImagesInput = document.getElementById("additionalImages");
+const additionalPreview = document.getElementById("additionalImagePreview");
+const addPhotosButton = document.getElementById("addPhotosButton");
+const existingProjectHelp = document.getElementById("existingProjectHelp");
 const logoutButton = document.getElementById("adminLogout");
 const MAX_IMAGE_BYTES = 2.5 * 1024 * 1024;
 const MAX_IMAGES = 12;
 const STATIC_PROJECT_COUNT = 4;
 let previewUrls = [];
+let additionalPreviewUrls = [];
+let uploadedProjects = [];
 
 function setStatus(message, isError = false) {
     statusMessage.textContent = message;
@@ -37,23 +45,31 @@ function showAdmin(authenticated) {
     dashboard.hidden = !authenticated;
 }
 
-function renderPreview() {
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    previewUrls = [];
-    preview.replaceChildren();
-    const files = [...imageInput.files];
+function renderPreviews(input, container, objectUrls) {
+    objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    objectUrls.length = 0;
+    container.replaceChildren();
+    const files = [...input.files];
     files.forEach((file) => {
         const figure = document.createElement("figure");
         const image = document.createElement("img");
         const caption = document.createElement("figcaption");
         const url = URL.createObjectURL(file);
-        previewUrls.push(url);
+        objectUrls.push(url);
         image.src = url;
         image.alt = "";
         caption.textContent = file.name;
         figure.append(image, caption);
-        preview.append(figure);
+        container.append(figure);
     });
+}
+
+function renderPreview() {
+    renderPreviews(imageInput, preview, previewUrls);
+}
+
+function renderAdditionalPreview() {
+    renderPreviews(additionalImagesInput, additionalPreview, additionalPreviewUrls);
 }
 
 function canvasToBlob(canvas, type, quality) {
@@ -144,9 +160,53 @@ async function handleLogin(event) {
 }
 
 async function setNextProjectTitle() {
+    await refreshUploadedProjects();
+    titleInput.value = `Project ${STATIC_PROJECT_COUNT + uploadedProjects.length + 1}`;
+}
+
+async function refreshUploadedProjects() {
     const response = await fetch("/api/projects", { cache: "no-store" });
     const data = await readResponse(response);
-    titleInput.value = `Project ${STATIC_PROJECT_COUNT + data.projects.length + 1}`;
+    uploadedProjects = data.projects;
+    const selectedId = existingProjectSelect.value;
+    existingProjectSelect.replaceChildren(new Option("Choose a project", ""));
+
+    uploadedProjects.forEach((project) => {
+        const option = new Option(
+            `${project.title} (${project.imageUrls.length}/12 photos)`,
+            project.id
+        );
+        existingProjectSelect.add(option);
+    });
+
+    if (uploadedProjects.some((project) => project.id === selectedId)) {
+        existingProjectSelect.value = selectedId;
+    }
+    updateAdditionalPhotoLimit();
+}
+
+function updateAdditionalPhotoLimit() {
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    const remaining = project ? Math.max(0, 12 - project.imageUrls.length) : 12;
+    additionalImagesInput.max = String(remaining);
+    additionalImagesInput.disabled = remaining === 0;
+    addPhotosButton.disabled = remaining === 0;
+    existingProjectHelp.textContent = project
+        ? remaining
+            ? `Choose up to ${remaining} additional JPEG, PNG, or WebP photos. They will be added as slides.`
+            : "This project already has the maximum of 12 photos."
+        : "Choose a project first. Up to 12 photos can be added at once.";
+}
+
+async function uploadFiles(files, setProgress) {
+    const imageUrls = [];
+    for (let index = 0; index < files.length; index += 1) {
+        setProgress(`Uploading photo ${index + 1} of ${files.length}…`);
+        imageUrls.push(await uploadImage(files[index]));
+    }
+    return imageUrls;
 }
 
 async function handleProjectSubmit(event) {
@@ -158,14 +218,8 @@ async function handleProjectSubmit(event) {
     }
 
     addProjectButton.disabled = true;
-    const imageUrls = [];
-
     try {
-        for (let index = 0; index < files.length; index += 1) {
-            setStatus(`Uploading photo ${index + 1} of ${files.length}…`);
-            imageUrls.push(await uploadImage(files[index]));
-        }
-
+        const imageUrls = await uploadFiles(files, setStatus);
         setStatus("Saving project…");
         const response = await fetch("/api/admin/projects", {
             method: "POST",
@@ -181,6 +235,45 @@ async function handleProjectSubmit(event) {
         setStatus(error.message, true);
     } finally {
         addProjectButton.disabled = false;
+    }
+}
+
+async function handleAddPhotos(event) {
+    event.preventDefault();
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    const files = [...additionalImagesInput.files];
+
+    if (!project) {
+        setStatus("Choose a project first.", true);
+        return;
+    }
+    if (!files.length || files.length + project.imageUrls.length > 12) {
+        setStatus(`Choose 1 to ${12 - project.imageUrls.length} additional photos.`, true);
+        return;
+    }
+
+    addPhotosButton.disabled = true;
+    addProjectButton.disabled = true;
+    try {
+        const newImageUrls = await uploadFiles(files, setStatus);
+        setStatus("Adding photos to project…");
+        const response = await fetch("/api/admin/projects", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ id: project.id, imageUrls: newImageUrls })
+        });
+        await readResponse(response);
+        addPhotosForm.reset();
+        renderAdditionalPreview();
+        await refreshUploadedProjects();
+        setStatus(`Added ${files.length} photo${files.length === 1 ? "" : "s"} to ${project.title}.`);
+    } catch (error) {
+        setStatus(error.message, true);
+    } finally {
+        addProjectButton.disabled = false;
+        updateAdditionalPhotoLimit();
     }
 }
 
@@ -202,8 +295,11 @@ async function init() {
     showAdmin(false);
     loginForm.addEventListener("submit", handleLogin);
     projectForm.addEventListener("submit", handleProjectSubmit);
+    addPhotosForm.addEventListener("submit", handleAddPhotos);
     logoutButton.addEventListener("click", handleLogout);
     imageInput.addEventListener("change", renderPreview);
+    additionalImagesInput.addEventListener("change", renderAdditionalPreview);
+    existingProjectSelect.addEventListener("change", updateAdditionalPhotoLimit);
 
     try {
         const session = await requestSession();
