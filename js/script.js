@@ -647,7 +647,7 @@ function initProjectGalleries(root = document) {
 function createUploadedProjectCard(project) {
     const card = document.createElement("article");
     card.className = "project-card card is-visible";
-    card.dataset.uploadedProject = "true";
+    card.dataset.managedProject = "true";
     card.setAttribute("aria-label", project.title);
 
     const heading = document.createElement("div");
@@ -658,20 +658,40 @@ function createUploadedProjectCard(project) {
 
     const gallery = document.createElement("div");
     gallery.className = "project-gallery";
-    gallery.setAttribute("aria-label", `${project.title} photos`);
+    gallery.setAttribute("aria-label", `${project.title} project gallery`);
     const track = document.createElement("div");
     track.className = "project-gallery-track";
 
-    project.imageUrls.forEach((url, index) => {
+    const slides = [
+        ...project.imageUrls.map((url) => ({ url, type: "image" })),
+        ...(project.videoUrls || []).map((url) => ({ url, type: "video" }))
+    ];
+
+    slides.forEach(({ url, type }, index) => {
         const slide = document.createElement("figure");
         slide.className = "project-slide";
         slide.hidden = index !== 0;
-        const image = document.createElement("img");
-        image.src = url;
-        image.alt = `${project.title}, photo ${index + 1}`;
-        image.loading = "lazy";
-        image.decoding = "async";
-        slide.append(image);
+        if (type === "video") {
+            const video = document.createElement("video");
+            video.muted = true;
+            video.controls = true;
+            video.playsInline = true;
+            video.preload = "metadata";
+            video.poster = project.imageUrls[0] || "";
+            video.setAttribute("aria-label", `${project.title}, video ${index + 1}`);
+            const source = document.createElement("source");
+            source.src = url;
+            source.type = "video/mp4";
+            video.append(source);
+            slide.append(video);
+        } else {
+            const image = document.createElement("img");
+            image.src = url;
+            image.alt = `${project.title}, photo ${index + 1}`;
+            image.loading = "lazy";
+            image.decoding = "async";
+            slide.append(image);
+        }
         track.append(slide);
     });
 
@@ -716,12 +736,16 @@ async function loadUploadedProjects() {
             throw new Error("Project list has an invalid format.");
         }
 
+        projectsGrid.replaceChildren();
         data.projects.forEach((project) => {
             if (
+                typeof project.id !== "string" ||
                 typeof project.title !== "string" ||
                 !Array.isArray(project.imageUrls) ||
-                project.imageUrls.length === 0 ||
-                !project.imageUrls.every((url) => typeof url === "string")
+                !Array.isArray(project.videoUrls || []) ||
+                project.imageUrls.some((url) => typeof url !== "string") ||
+                (project.videoUrls || []).some((url) => typeof url !== "string") ||
+                project.imageUrls.length + (project.videoUrls || []).length === 0
             ) {
                 console.error("Skipping invalid uploaded project entry:", project);
                 return;
@@ -733,6 +757,7 @@ async function loadUploadedProjects() {
         });
     } catch (error) {
         console.error("Unable to load uploaded gallery projects:", error);
+        initProjectGalleries();
     }
 }
 
@@ -839,7 +864,6 @@ function init() {
     initLetterAnimation();
     initHeroParallax();
     initConstructionCanvas();
-    initProjectGalleries();
     loadUploadedProjects();
     initContactForm();
     initFooterYear();

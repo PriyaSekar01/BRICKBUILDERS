@@ -53,21 +53,33 @@
                 </form>
 
                 <section class="admin-existing-projects" aria-labelledby="existingProjectsTitle">
-                    <h2 id="existingProjectsTitle">Add photos to an existing project</h2>
+                    <h2 id="existingProjectsTitle">Manage existing projects</h2>
+                    <label class="admin-project-picker">
+                        Project to manage
+                        <select id="existingProjectSelect" name="projectId" required>
+                            <option value="">Choose a project</option>
+                        </select>
+                    </label>
+                    <form id="renameProjectForm" class="admin-form admin-rename-form">
+                        <label>
+                            Project name
+                            <input id="existingProjectTitle" name="title" type="text"
+                                   maxlength="80" required>
+                        </label>
+                        <button id="renameProjectButton" class="btn btn-primary" type="submit">
+                            Save project name
+                        </button>
+                    </form>
+                    <h3 class="admin-media-title">Current project slides</h3>
+                    <div id="existingMediaList" class="admin-media-list"></div>
                     <form id="addPhotosForm" class="admin-form">
                         <label>
-                            Project
-                            <select id="existingProjectSelect" name="projectId" required>
-                                <option value="">Choose a project</option>
-                            </select>
-                        </label>
-                        <label>
-                            Additional photos
+                            Add photos
                             <input id="additionalImages" name="images" type="file"
                                    accept="image/jpeg,image/png,image/webp" multiple required>
                         </label>
                         <p id="existingProjectHelp" class="admin-help">
-                            Select up to 12 photos at once. Photos are added as new slides.
+                            Choose a project, then add photos as new slides.
                         </p>
                         <div id="additionalImagePreview" class="admin-preview" aria-live="polite"></div>
                         <button id="addPhotosButton" class="btn btn-primary" type="submit">

@@ -1,6 +1,7 @@
 "use strict";
 
 const { hasValidSession, isSameOrigin } = require("../../lib/admin-auth");
+const { del } = require("@vercel/blob");
 const {
     MAX_PROJECTS,
     readProjects,
@@ -33,16 +34,6 @@ module.exports = async function adminProjects(req, res) {
     }
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
-    const title = typeof body.title === "string" ? body.title.trim() : "";
-    const imageUrls = body.imageUrls;
-    const validationError = validateProject(
-        req.method === "PATCH" ? "Existing project" : title,
-        imageUrls
-    );
-    if (validationError) {
-        return respond(res, 400, { message: validationError });
-    }
-
     try {
         const projects = await readProjects();
         if (req.method === "PATCH") {
@@ -53,21 +44,72 @@ module.exports = async function adminProjects(req, res) {
             }
 
             const project = projects[projectIndex];
-            if (project.imageUrls.length + imageUrls.length > 12) {
-                return respond(res, 400, {
-                    message: "A project can have up to 12 photos. Choose fewer additional photos."
-                });
+            let updatedProject;
+            if (body.action === "rename") {
+                const title = typeof body.title === "string" ? body.title.trim() : "";
+                if (!title || title.length > 80) {
+                    return respond(res, 400, { message: "Enter a project name of 1 to 80 characters." });
+                }
+                updatedProject = { ...project, title };
+            } else if (body.action === "add-images") {
+                const imageUrls = body.imageUrls;
+                const validationError = validateProject(project.title, imageUrls);
+                if (validationError) return respond(res, 400, { message: validationError });
+                const mediaCount = project.imageUrls.length + (project.videoUrls || []).length;
+                if (mediaCount + imageUrls.length > 12) {
+                    return respond(res, 400, {
+                        message: "A project can have up to 12 photos or videos. Choose fewer additional photos."
+                    });
+                }
+                updatedProject = { ...project, imageUrls: [...project.imageUrls, ...imageUrls] };
+            } else if (body.action === "remove-media") {
+                const mediaUrl = typeof body.mediaUrl === "string" ? body.mediaUrl : "";
+                const isImage = project.imageUrls.includes(mediaUrl);
+                const isVideo = (project.videoUrls || []).includes(mediaUrl);
+                if (!isImage && !isVideo) {
+                    return respond(res, 404, { message: "That project photo or video was not found." });
+                }
+                const remainingImages = isImage
+                    ? project.imageUrls.filter((url) => url !== mediaUrl)
+                    : project.imageUrls;
+                const remainingVideos = isVideo
+                    ? project.videoUrls.filter((url) => url !== mediaUrl)
+                    : project.videoUrls || [];
+                if (!remainingImages.length && !remainingVideos.length) {
+                    return respond(res, 400, { message: "A project must keep at least one photo or video." });
+                }
+                updatedProject = {
+                    ...project,
+                    imageUrls: remainingImages,
+                    videoUrls: remainingVideos
+                };
+            } else {
+                return respond(res, 400, { message: "Choose a supported project change." });
             }
 
-            const updatedProject = {
-                ...project,
-                imageUrls: [...project.imageUrls, ...imageUrls]
-            };
             const updatedProjects = [...projects];
             updatedProjects[projectIndex] = updatedProject;
             await saveProjects(updatedProjects);
+
+            if (body.action === "remove-media" &&
+                typeof body.mediaUrl === "string" &&
+                body.mediaUrl.includes(".public.blob.vercel-storage.com/")) {
+                try {
+                    await del(body.mediaUrl);
+                } catch (error) {
+                    console.error("Project slide removed but stored image cleanup failed:", error);
+                    return respond(res, 502, {
+                        message: "The slide was removed from the gallery, but its stored image could not be deleted."
+                    });
+                }
+            }
             return respond(res, 200, { project: updatedProject });
         }
+
+        const title = typeof body.title === "string" ? body.title.trim() : "";
+        const imageUrls = body.imageUrls;
+        const validationError = validateProject(title, imageUrls);
+        if (validationError) return respond(res, 400, { message: validationError });
 
         if (projects.length >= MAX_PROJECTS) {
             return respond(res, 400, { message: "The project gallery has reached its limit." });
@@ -77,6 +119,7 @@ module.exports = async function adminProjects(req, res) {
             id: require("node:crypto").randomUUID(),
             title,
             imageUrls,
+            videoUrls: [],
             createdAt: new Date().toISOString()
         };
         await saveProjects([...projects, project]);

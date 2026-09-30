@@ -14,10 +14,13 @@ const additionalImagesInput = document.getElementById("additionalImages");
 const additionalPreview = document.getElementById("additionalImagePreview");
 const addPhotosButton = document.getElementById("addPhotosButton");
 const existingProjectHelp = document.getElementById("existingProjectHelp");
+const existingProjectTitle = document.getElementById("existingProjectTitle");
+const renameProjectForm = document.getElementById("renameProjectForm");
+const renameProjectButton = document.getElementById("renameProjectButton");
+const existingMediaList = document.getElementById("existingMediaList");
 const logoutButton = document.getElementById("adminLogout");
 const MAX_IMAGE_BYTES = 2.5 * 1024 * 1024;
 const MAX_IMAGES = 12;
-const STATIC_PROJECT_COUNT = 4;
 let previewUrls = [];
 let additionalPreviewUrls = [];
 let uploadedProjects = [];
@@ -161,7 +164,7 @@ async function handleLogin(event) {
 
 async function setNextProjectTitle() {
     await refreshUploadedProjects();
-    titleInput.value = `Project ${STATIC_PROJECT_COUNT + uploadedProjects.length + 1}`;
+    titleInput.value = `Project ${uploadedProjects.length + 1}`;
 }
 
 async function refreshUploadedProjects() {
@@ -172,8 +175,9 @@ async function refreshUploadedProjects() {
     existingProjectSelect.replaceChildren(new Option("Choose a project", ""));
 
     uploadedProjects.forEach((project) => {
+        const mediaCount = getProjectMedia(project).length;
         const option = new Option(
-            `${project.title} (${project.imageUrls.length}/12 photos)`,
+            `${project.title} (${mediaCount}/12 slides)`,
             project.id
         );
         existingProjectSelect.add(option);
@@ -182,14 +186,67 @@ async function refreshUploadedProjects() {
     if (uploadedProjects.some((project) => project.id === selectedId)) {
         existingProjectSelect.value = selectedId;
     }
+    renderExistingProject();
     updateAdditionalPhotoLimit();
+}
+
+function getProjectMedia(project) {
+    return [
+        ...project.imageUrls.map((url) => ({ url, type: "image" })),
+        ...(project.videoUrls || []).map((url) => ({ url, type: "video" }))
+    ];
+}
+
+function renderExistingProject() {
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    existingMediaList.replaceChildren();
+    existingProjectTitle.value = project?.title || "";
+
+    if (!project) {
+        existingMediaList.textContent = "Choose a project to manage its slides.";
+        existingMediaList.className = "admin-media-list admin-empty-media";
+        return;
+    }
+
+    existingMediaList.className = "admin-media-list";
+    getProjectMedia(project).forEach(({ url, type }) => {
+        const item = document.createElement("div");
+        item.className = "admin-media-item";
+        if (type === "image") {
+            const image = document.createElement("img");
+            image.src = url;
+            image.alt = "";
+            item.append(image);
+        } else {
+            const videoLabel = document.createElement("span");
+            videoLabel.className = "admin-media-placeholder";
+            videoLabel.textContent = "VIDEO";
+            item.append(videoLabel);
+        }
+
+        const name = document.createElement("span");
+        name.className = "admin-media-name";
+        name.textContent = url.split("/").pop() || type;
+        const remove = document.createElement("button");
+        remove.className = "admin-delete-media";
+        remove.type = "button";
+        remove.dataset.removeMedia = url;
+        remove.textContent = "Delete";
+        remove.setAttribute("aria-label", `Delete ${type} slide`);
+        item.append(name, remove);
+        existingMediaList.append(item);
+    });
 }
 
 function updateAdditionalPhotoLimit() {
     const project = uploadedProjects.find(
         (item) => item.id === existingProjectSelect.value
     );
-    const remaining = project ? Math.max(0, 12 - project.imageUrls.length) : 12;
+    const remaining = project
+        ? Math.max(0, 12 - getProjectMedia(project).length)
+        : 12;
     additionalImagesInput.max = String(remaining);
     additionalImagesInput.disabled = remaining === 0;
     addPhotosButton.disabled = remaining === 0;
@@ -249,8 +306,9 @@ async function handleAddPhotos(event) {
         setStatus("Choose a project first.", true);
         return;
     }
-    if (!files.length || files.length + project.imageUrls.length > 12) {
-        setStatus(`Choose 1 to ${12 - project.imageUrls.length} additional photos.`, true);
+    const remaining = 12 - getProjectMedia(project).length;
+    if (!files.length || files.length > remaining) {
+        setStatus(`Choose 1 to ${remaining} additional photos.`, true);
         return;
     }
 
@@ -262,7 +320,7 @@ async function handleAddPhotos(event) {
         const response = await fetch("/api/admin/projects", {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({ id: project.id, imageUrls: newImageUrls })
+            body: JSON.stringify({ action: "add-images", id: project.id, imageUrls: newImageUrls })
         });
         await readResponse(response);
         addPhotosForm.reset();
@@ -274,6 +332,64 @@ async function handleAddPhotos(event) {
     } finally {
         addProjectButton.disabled = false;
         updateAdditionalPhotoLimit();
+    }
+}
+
+async function handleRenameProject(event) {
+    event.preventDefault();
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    if (!project) {
+        setStatus("Choose a project first.", true);
+        return;
+    }
+
+    renameProjectButton.disabled = true;
+    try {
+        const response = await fetch("/api/admin/projects", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                action: "rename",
+                id: project.id,
+                title: existingProjectTitle.value
+            })
+        });
+        await readResponse(response);
+        await refreshUploadedProjects();
+        setStatus("Project name updated.");
+    } catch (error) {
+        setStatus(error.message, true);
+    } finally {
+        renameProjectButton.disabled = false;
+    }
+}
+
+async function handleRemoveMedia(mediaUrl, button) {
+    const project = uploadedProjects.find(
+        (item) => item.id === existingProjectSelect.value
+    );
+    if (!project) return;
+    if (!window.confirm("Remove this slide from the project?")) return;
+
+    button.disabled = true;
+    try {
+        const response = await fetch("/api/admin/projects", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                action: "remove-media",
+                id: project.id,
+                mediaUrl
+            })
+        });
+        await readResponse(response);
+        await refreshUploadedProjects();
+        setStatus("Project slide deleted.");
+    } catch (error) {
+        setStatus(error.message, true);
+        button.disabled = false;
     }
 }
 
@@ -296,10 +412,18 @@ async function init() {
     loginForm.addEventListener("submit", handleLogin);
     projectForm.addEventListener("submit", handleProjectSubmit);
     addPhotosForm.addEventListener("submit", handleAddPhotos);
+    renameProjectForm.addEventListener("submit", handleRenameProject);
     logoutButton.addEventListener("click", handleLogout);
     imageInput.addEventListener("change", renderPreview);
     additionalImagesInput.addEventListener("change", renderAdditionalPreview);
-    existingProjectSelect.addEventListener("change", updateAdditionalPhotoLimit);
+    existingProjectSelect.addEventListener("change", () => {
+        renderExistingProject();
+        updateAdditionalPhotoLimit();
+    });
+    existingMediaList.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-remove-media]");
+        if (button) handleRemoveMedia(button.dataset.removeMedia, button);
+    });
 
     try {
         const session = await requestSession();

@@ -1234,7 +1234,7 @@ button { cursor: pointer; }
         box-shadow .35s ease;
 }
 
-.project-card[data-uploaded-project] {
+.project-card[data-managed-project] {
     opacity: 1;
     transform: none;
 }
