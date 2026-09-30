@@ -1234,6 +1234,11 @@ button { cursor: pointer; }
         box-shadow .35s ease;
 }
 
+.project-card[data-uploaded-project] {
+    opacity: 1;
+    transform: none;
+}
+
 .project-card:hover {
     transform: translateY(-5px);
     border-color: rgba(255,196,91,.30);
