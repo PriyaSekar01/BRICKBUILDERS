@@ -26,9 +26,10 @@ let previewUrls = [];
 let additionalPreviewUrls = [];
 let uploadedProjects = [];
 
-function setStatus(message, isError = false) {
+function setStatus(message, isError = false, isSuccess = false) {
     statusMessage.textContent = message;
     statusMessage.dataset.error = String(isError);
+    statusMessage.dataset.success = String(isSuccess);
 }
 
 async function readResponse(response) {
@@ -296,6 +297,7 @@ async function handleProjectSubmit(event) {
         return;
     }
 
+    const projectTitle = titleInput.value.trim();
     addProjectButton.disabled = true;
     try {
         const imageUrls = await uploadFiles(files, setStatus);
@@ -303,13 +305,17 @@ async function handleProjectSubmit(event) {
         const response = await fetch("/api/admin/projects", {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({ title: titleInput.value, imageUrls })
+            body: JSON.stringify({ title: projectTitle, imageUrls })
         });
         await readResponse(response);
         projectForm.reset();
         renderPreview();
         await setNextProjectTitle();
-        setStatus("Project added to the website gallery.");
+        setStatus(
+            `Success! ${files.length} photo${files.length === 1 ? "" : "s"} uploaded and ${projectTitle} was added to the website gallery.`,
+            false,
+            true
+        );
     } catch (error) {
         setStatus(error.message, true);
     } finally {
@@ -348,7 +354,11 @@ async function handleAddPhotos(event) {
         addPhotosForm.reset();
         renderAdditionalPreview();
         updateProjectInList(result.project);
-        setStatus(`Added ${files.length} photo${files.length === 1 ? "" : "s"} to ${project.title}.`);
+        setStatus(
+            `Success! ${files.length} photo${files.length === 1 ? "" : "s"} uploaded and added to ${project.title}.`,
+            false,
+            true
+        );
     } catch (error) {
         setStatus(error.message, true);
     } finally {
