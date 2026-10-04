@@ -281,11 +281,31 @@ function updateAdditionalPhotoLimit() {
 }
 
 async function uploadFiles(files, setProgress) {
-    const imageUrls = [];
-    for (let index = 0; index < files.length; index += 1) {
-        setProgress(`Uploading photo ${index + 1} of ${files.length}…`);
-        imageUrls.push(await uploadImage(files[index]));
+    const imageUrls = new Array(files.length);
+    const concurrency = Math.min(3, files.length);
+    let nextIndex = 0;
+    let completed = 0;
+    let uploadError;
+
+    async function uploadNext() {
+        while (!uploadError) {
+            const index = nextIndex;
+            nextIndex += 1;
+            if (index >= files.length) return;
+
+            try {
+                imageUrls[index] = await uploadImage(files[index]);
+                completed += 1;
+                setProgress(`Uploaded photo ${completed} of ${files.length}…`);
+            } catch (error) {
+                uploadError = new Error(`${files[index].name}: ${error.message}`);
+            }
+        }
     }
+
+    setProgress(`Preparing and uploading ${files.length} photo${files.length === 1 ? "" : "s"}…`);
+    await Promise.all(Array.from({ length: concurrency }, () => uploadNext()));
+    if (uploadError) throw uploadError;
     return imageUrls;
 }
 
@@ -307,10 +327,12 @@ async function handleProjectSubmit(event) {
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ title: projectTitle, imageUrls })
         });
-        await readResponse(response);
+        const result = await readResponse(response);
         projectForm.reset();
         renderPreview();
-        await setNextProjectTitle();
+        uploadedProjects = [...uploadedProjects, result.project];
+        renderProjectOptions();
+        setNextProjectTitleFromList();
         setStatus(
             `Success! ${files.length} photo${files.length === 1 ? "" : "s"} uploaded and ${projectTitle} was added to the website gallery.`,
             false,
