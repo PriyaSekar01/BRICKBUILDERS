@@ -404,9 +404,28 @@ async function handleRemoveMedia(mediaUrl, button) {
     );
     if (!project) return;
     if (!window.confirm("Remove this slide from the project?")) return;
+    if (getProjectMedia(project).length === 1) {
+        setStatus("A project must keep at least one photo or video.", true);
+        return;
+    }
 
     button.disabled = true;
+    existingProjectSelect.disabled = true;
+    renameProjectButton.disabled = true;
+    addPhotosButton.disabled = true;
+    deleteProjectButton.disabled = true;
     setStatus("Removing slide…");
+
+    const updatedProject = {
+        ...project,
+        imageUrls: project.imageUrls.filter((url) => url !== mediaUrl),
+        videoUrls: (project.videoUrls || []).filter((url) => url !== mediaUrl)
+    };
+    updateProjectInList(updatedProject);
+    existingProjectSelect.disabled = true;
+    addPhotosButton.disabled = true;
+    deleteProjectButton.disabled = true;
+
     try {
         const response = await fetch("/api/admin/projects", {
             method: "PATCH",
@@ -421,8 +440,13 @@ async function handleRemoveMedia(mediaUrl, button) {
         updateProjectInList(result.project);
         setStatus("Project slide deleted.");
     } catch (error) {
+        updateProjectInList(project);
         setStatus(error.message, true);
-        button.disabled = false;
+    } finally {
+        existingProjectSelect.disabled = false;
+        renameProjectButton.disabled = false;
+        deleteProjectButton.disabled = !existingProjectSelect.value;
+        updateAdditionalPhotoLimit();
     }
 }
 
