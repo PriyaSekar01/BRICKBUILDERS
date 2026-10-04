@@ -414,7 +414,6 @@ async function handleRemoveMedia(mediaUrl, button) {
     renameProjectButton.disabled = true;
     addPhotosButton.disabled = true;
     deleteProjectButton.disabled = true;
-    setStatus("Removing slide…");
 
     const updatedProject = {
         ...project,
@@ -422,9 +421,7 @@ async function handleRemoveMedia(mediaUrl, button) {
         videoUrls: (project.videoUrls || []).filter((url) => url !== mediaUrl)
     };
     updateProjectInList(updatedProject);
-    existingProjectSelect.disabled = true;
-    addPhotosButton.disabled = true;
-    deleteProjectButton.disabled = true;
+    setStatus("Slide removed.");
 
     try {
         const response = await fetch("/api/admin/projects", {
