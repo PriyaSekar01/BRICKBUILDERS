@@ -25,6 +25,7 @@ const MAX_IMAGES = 12;
 let previewUrls = [];
 let additionalPreviewUrls = [];
 let uploadedProjects = [];
+let mediaRemovalInProgress = false;
 
 function setStatus(message, isError = false, isSuccess = false) {
     statusMessage.textContent = message;
@@ -263,6 +264,14 @@ function renderExistingProject() {
     });
 }
 
+function setMediaListBusy(isBusy) {
+    existingMediaList.inert = isBusy;
+    existingMediaList.setAttribute("aria-busy", String(isBusy));
+    existingMediaList.querySelectorAll("button[data-remove-media]").forEach((button) => {
+        button.disabled = isBusy;
+    });
+}
+
 function updateAdditionalPhotoLimit() {
     const project = uploadedProjects.find(
         (item) => item.id === existingProjectSelect.value
@@ -421,6 +430,8 @@ async function handleRenameProject(event) {
 }
 
 async function handleRemoveMedia(mediaUrl, button) {
+    if (mediaRemovalInProgress) return;
+
     const project = uploadedProjects.find(
         (item) => item.id === existingProjectSelect.value
     );
@@ -431,6 +442,7 @@ async function handleRemoveMedia(mediaUrl, button) {
         : "Remove this slide from the project?";
     if (!window.confirm(confirmation)) return;
 
+    mediaRemovalInProgress = true;
     const previousProjects = uploadedProjects;
     button.disabled = true;
     existingProjectSelect.disabled = true;
@@ -443,7 +455,7 @@ async function handleRemoveMedia(mediaUrl, button) {
         existingProjectSelect.value = "";
         renderProjectOptions();
         setNextProjectTitleFromList();
-        setStatus(`${project.title} deleted.`);
+        setStatus(`Removing ${project.title}…`);
     } else {
         const updatedProject = {
             ...project,
@@ -451,8 +463,9 @@ async function handleRemoveMedia(mediaUrl, button) {
             videoUrls: (project.videoUrls || []).filter((url) => url !== mediaUrl)
         };
         updateProjectInList(updatedProject);
-        setStatus("Slide removed.");
+        setStatus("Slide removed. Saving…");
     }
+    setMediaListBusy(true);
 
     try {
         const response = await fetch("/api/admin/projects", {
@@ -478,6 +491,8 @@ async function handleRemoveMedia(mediaUrl, button) {
         }
         setStatus(error.message, true);
     } finally {
+        mediaRemovalInProgress = false;
+        setMediaListBusy(false);
         existingProjectSelect.disabled = false;
         renameProjectButton.disabled = false;
         deleteProjectButton.disabled = !existingProjectSelect.value;
