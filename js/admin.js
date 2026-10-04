@@ -403,41 +403,57 @@ async function handleRemoveMedia(mediaUrl, button) {
         (item) => item.id === existingProjectSelect.value
     );
     if (!project) return;
-    if (!window.confirm("Remove this slide from the project?")) return;
-    if (getProjectMedia(project).length === 1) {
-        setStatus("A project must keep at least one photo or video.", true);
-        return;
-    }
+    const removesProject = getProjectMedia(project).length === 1;
+    const confirmation = removesProject
+        ? `This is the last slide. Deleting it will also delete ${project.title}. Continue?`
+        : "Remove this slide from the project?";
+    if (!window.confirm(confirmation)) return;
 
+    const previousProjects = uploadedProjects;
     button.disabled = true;
     existingProjectSelect.disabled = true;
     renameProjectButton.disabled = true;
     addPhotosButton.disabled = true;
     deleteProjectButton.disabled = true;
 
-    const updatedProject = {
-        ...project,
-        imageUrls: project.imageUrls.filter((url) => url !== mediaUrl),
-        videoUrls: (project.videoUrls || []).filter((url) => url !== mediaUrl)
-    };
-    updateProjectInList(updatedProject);
-    setStatus("Slide removed.");
+    if (removesProject) {
+        uploadedProjects = uploadedProjects.filter((item) => item.id !== project.id);
+        existingProjectSelect.value = "";
+        renderProjectOptions();
+        setNextProjectTitleFromList();
+        setStatus(`${project.title} deleted.`);
+    } else {
+        const updatedProject = {
+            ...project,
+            imageUrls: project.imageUrls.filter((url) => url !== mediaUrl),
+            videoUrls: (project.videoUrls || []).filter((url) => url !== mediaUrl)
+        };
+        updateProjectInList(updatedProject);
+        setStatus("Slide removed.");
+    }
 
     try {
         const response = await fetch("/api/admin/projects", {
-            method: "PATCH",
+            method: removesProject ? "DELETE" : "PATCH",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({
-                action: "remove-media",
-                id: project.id,
-                mediaUrl
-            })
+            body: JSON.stringify(removesProject
+                ? { id: project.id }
+                : { action: "remove-media", id: project.id, mediaUrl })
         });
-        const result = await readResponse(response);
-        updateProjectInList(result.project);
-        setStatus("Project slide deleted.");
+        await readResponse(response);
+        if (removesProject) {
+            setStatus(`${project.title} was deleted from the gallery.`);
+        } else {
+            setStatus("Project slide deleted.");
+        }
     } catch (error) {
-        updateProjectInList(project);
+        if (removesProject) {
+            uploadedProjects = previousProjects;
+            existingProjectSelect.value = project.id;
+            renderProjectOptions();
+        } else {
+            updateProjectInList(project);
+        }
         setStatus(error.message, true);
     } finally {
         existingProjectSelect.disabled = false;

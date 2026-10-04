@@ -14,48 +14,78 @@
 </head>
 <body class="admin-page">
     <main class="admin-shell">
-        <a class="admin-back-link" href="/#projects">← Back to BRICKBUILDERS</a>
+        <a class="admin-back-link" href="/#projects">
+            <span aria-hidden="true">←</span> Back to BRICKBUILDERS
+        </a>
 
-        <section class="admin-panel glass-panel" aria-labelledby="adminTitle">
-            <p class="section-kicker">BRICKBUILDERS</p>
+        <header class="admin-header">
+            <p class="admin-eyebrow"><span></span> BRICKBUILDERS / STUDIO</p>
             <h1 id="adminTitle">Project gallery</h1>
-            <p class="admin-intro">Sign in to add a project and its photos to the website.</p>
+            <p class="admin-intro">A clear space to publish new work and keep your project gallery up to date.</p>
+        </header>
 
-            <form id="adminLoginForm" class="admin-form" hidden>
-                <label>
-                    Admin password
-                    <input type="password" name="password" autocomplete="current-password"
-                           required minlength="8">
-                </label>
-                <button class="btn btn-primary" type="submit">Sign in</button>
-            </form>
+        <form id="adminLoginForm" class="admin-login-card glass-panel admin-form" hidden>
+            <h2>Welcome back</h2>
+            <p>Sign in to manage your project gallery.</p>
+            <label>
+                Admin password
+                <input type="password" name="password" autocomplete="current-password"
+                       required minlength="8">
+            </label>
+            <button class="btn btn-primary" type="submit">Sign in</button>
+        </form>
 
-            <section id="adminDashboard" hidden aria-labelledby="addProjectTitle">
-                <div class="admin-dashboard-heading">
-                    <h2 id="addProjectTitle">Add a project</h2>
-                    <button id="adminLogout" class="admin-quiet-button" type="button">Sign out</button>
+        <section id="adminDashboard" hidden aria-labelledby="adminTitle">
+            <div class="admin-dashboard-heading">
+                <div>
+                    <p class="admin-section-label">YOUR WORKSPACE</p>
+                    <h2>Projects</h2>
                 </div>
+                <button id="adminLogout" class="admin-quiet-button" type="button">
+                    Sign out <span aria-hidden="true">↗</span>
+                </button>
+            </div>
 
-                <form id="projectUploadForm" class="admin-form">
-                    <label>
-                        Project name
-                        <input id="projectTitle" name="title" type="text"
-                               maxlength="80" required>
-                    </label>
-                    <label>
-                        Project photos
-                        <input id="projectImages" name="images" type="file"
-                               accept="image/jpeg,image/png,image/webp" multiple required>
-                    </label>
-                    <p class="admin-help">Choose up to 12 JPEG, PNG, or WebP photos. Large images are resized before upload.</p>
-                    <div id="imagePreview" class="admin-preview" aria-live="polite"></div>
-                    <button id="addProjectButton" class="btn btn-primary" type="submit">
-                        Upload and add project
-                    </button>
-                </form>
+            <div class="admin-card-grid">
+                <section class="admin-card glass-panel" aria-labelledby="addProjectTitle">
+                    <div class="admin-card-heading">
+                        <span class="admin-card-number">01</span>
+                        <div>
+                            <p class="admin-section-label">PUBLISH SOMETHING NEW</p>
+                            <h2 id="addProjectTitle">Add a project</h2>
+                        </div>
+                    </div>
+                    <p class="admin-card-intro">Create a gallery entry and add the photos that bring the project to life.</p>
 
-                <section class="admin-existing-projects" aria-labelledby="existingProjectsTitle">
-                    <h2 id="existingProjectsTitle">Manage existing projects</h2>
+                    <form id="projectUploadForm" class="admin-form">
+                        <label>
+                            Project name
+                            <input id="projectTitle" name="title" type="text"
+                                   maxlength="80" required placeholder="e.g. The Cedar House">
+                        </label>
+                        <label>
+                            Project photos
+                            <input id="projectImages" name="images" type="file"
+                                   accept="image/jpeg,image/png,image/webp" multiple required>
+                        </label>
+                        <p class="admin-help">Up to 12 JPEG, PNG, or WebP photos. Large images are resized automatically.</p>
+                        <div id="imagePreview" class="admin-preview" aria-live="polite"></div>
+                        <button id="addProjectButton" class="btn btn-primary" type="submit">
+                            Upload and add project <span aria-hidden="true">→</span>
+                        </button>
+                    </form>
+                </section>
+
+                <section class="admin-card glass-panel admin-existing-projects" aria-labelledby="existingProjectsTitle">
+                    <div class="admin-card-heading">
+                        <span class="admin-card-number">02</span>
+                        <div>
+                            <p class="admin-section-label">UPDATE YOUR GALLERY</p>
+                            <h2 id="existingProjectsTitle">Manage projects</h2>
+                        </div>
+                    </div>
+                    <p class="admin-card-intro">Choose a project to update its name, slides, or photos.</p>
+
                     <label class="admin-project-picker">
                         Project to manage
                         <select id="existingProjectSelect" name="projectId" required>
@@ -69,15 +99,19 @@
                                    maxlength="80" required>
                         </label>
                         <button id="renameProjectButton" class="btn btn-primary" type="submit">
-                            Save project name
+                            Save name
                         </button>
                     </form>
                     <button id="deleteProjectButton" class="admin-delete-project" type="button" disabled>
                         Delete entire project
                     </button>
-                    <h3 class="admin-media-title">Current project slides</h3>
+
+                    <div class="admin-media-heading">
+                        <h3 class="admin-media-title">Current slides</h3>
+                    </div>
                     <div id="existingMediaList" class="admin-media-list"></div>
-                    <form id="addPhotosForm" class="admin-form">
+
+                    <form id="addPhotosForm" class="admin-form admin-add-photos-form">
                         <label>
                             Add photos
                             <input id="additionalImages" name="images" type="file"
@@ -88,14 +122,15 @@
                         </p>
                         <div id="additionalImagePreview" class="admin-preview" aria-live="polite"></div>
                         <button id="addPhotosButton" class="btn btn-primary" type="submit">
-                            Add photos to project
+                            Add photos to project <span aria-hidden="true">→</span>
                         </button>
                     </form>
                 </section>
-            </section>
-
-            <p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
+            </div>
         </section>
+
+        <p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
+        <footer class="admin-footer">BRICKBUILDERS <span>•</span> PROJECT MANAGEMENT</footer>
     </main>
 </body>
 </html>
